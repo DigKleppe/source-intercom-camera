@@ -1,0 +1,4 @@
+camera-ringThread.o: ../../src/ringThread.c \
+ /home/dig/nanoPiFire2A/tools/4.9.3/arm-cortexa9-linux-gnueabihf/sys-root/usr/include/stdc-predef.h
+
+/home/dig/nanoPiFire2A/tools/4.9.3/arm-cortexa9-linux-gnueabihf/sys-root/usr/include/stdc-predef.h:
