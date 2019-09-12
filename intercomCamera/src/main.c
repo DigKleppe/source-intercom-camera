@@ -428,12 +428,9 @@ void startRing ( int p) {
 			setAudioReceiveTask(AUDIOTASK_RING,UDPAudioRxPort,microCardNo); // local speaker
 			ringTimer = RINGTIME;
 		}
-		setVideoTask(VIDEOTASK_STREAM,UDPVideoPort,NULL,cameraCard);
-		setAudioTransmitTask(AUDIOTASK_TALK,UDPAudioTxPort,microCardNo);
 		active = true;
 	}
 }
-
 int main(int argc, char *argv[]) {
 	int result;
 	uint32_t oldConnectCntr =0;

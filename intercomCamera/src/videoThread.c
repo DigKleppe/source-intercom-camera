@@ -14,7 +14,7 @@
 #include <string.h>
 #include <unistd.h>
 
-//#define NOSCREEN
+#define NOSCREEN
 
 gboolean link_elements_with_filter (GstElement *element1, GstElement *element2, GstCaps *caps)
 {
@@ -58,7 +58,7 @@ static void stopVideo (){
 		gst_object_unref(videopipeline);
 		videopipeline = NULL;
 		print("video stopped\n");
-		usleep( 10000);
+		usleep( 20000);
 	}
 }
 
@@ -162,11 +162,7 @@ bool setVideoTask( streamerTask_t task, int UDPport, char * pText, int cameraCar
 
 			videopayloader = gst_element_factory_make ("rtpjpegpay", "jpegpayloader");
 			udpSink = gst_element_factory_make ("udpsink", "udpsink");
-			videosink =  gst_element_factory_make ("nxvideosink", "videosink");
-			jpegdec =  gst_element_factory_make ("jpegdec", "jpegdec");typedef enum VIDEOTASK { VIDEOTASK_SHOWMESSAGE, VIDEOTASK_STREAM } videoTask_t;
-			videoconvert =  gst_element_factory_make ("videoconvert", "videovideoconvert");
-			videoflip = gst_element_factory_make("videoflip","videoflip");
-			g_object_set (videoflip,"method", 3,NULL);
+
 
 			//			textoverlay = gst_element_factory_make("textoverlay", "textoverlay" );  removed meoryleak
 			//			g_object_set (G_OBJECT (textoverlay), "valignment",GST_BASE_TEXT_OVERLAY_VALIGN_TOP,NULL);
@@ -175,12 +171,17 @@ bool setVideoTask( streamerTask_t task, int UDPport, char * pText, int cameraCar
 			//			g_object_set (G_OBJECT (textoverlay), "text",pText,NULL);
 			//			strcpy ( textBuffer, pText);
 
+#ifndef NOSCREEN
+			jpegdec =  gst_element_factory_make ("jpegdec", "jpegdec");
+			videosink =  gst_element_factory_make ("nxvideosink", "videosink");
+			videoconvert =  gst_element_factory_make ("videoconvert", "videovideoconvert");
+			videoflip = gst_element_factory_make("videoflip","videoflip");
+			g_object_set (videoflip,"method", 3,NULL);
 			tee= gst_element_factory_make ("tee", "tee");
 			g_object_set (tee, "name","t",NULL);
-
 			udpQueue= gst_element_factory_make ("queue", "udpQueue");
 			videoQueue= gst_element_factory_make ("queue", "videoQueue");
-
+#endif
 
 			if ( myFloorID == BASE_FLOOR )
 				g_object_set (udpSink, "port", VIDEOPORT1, NULL);
@@ -191,15 +192,22 @@ bool setVideoTask( streamerTask_t task, int UDPport, char * pText, int cameraCar
 
 			videopipeline = gst_pipeline_new ("videopipeline");
 
+#ifndef NOSCREEN
 			if (!videopipeline || !videoSource || !videopayloader || !udpSink || !tee || !udpQueue || !videoQueue || !videosink || !jpegdec || !videoflip || !videoconvert) {
+#else
+			if (!videopipeline || !videoSource || !videopayloader || !udpSink ) {
+#endif
 				g_printerr ("VideoThread Not all elements could be created.\n");
 				error = true;
 			}
 			if (!error) {
 				/* Build the pipeline */
 				//				gst_bin_add_many (GST_BIN (videopipeline),videoSource,tee, udpQueue, videoQueue, videopayloader, textoverlay, udpSink, jpegdec , videoconvert, videoflip, videosink,  NULL);
+#ifndef NOSCREEN
 				gst_bin_add_many (GST_BIN (videopipeline),videoSource,tee, udpQueue, videoQueue, videopayloader, udpSink, jpegdec , videoconvert, videoflip, videosink,  NULL);
-
+#else
+				gst_bin_add_many (GST_BIN (videopipeline),videoSource, videopayloader, udpSink,  NULL);
+#endif
 				if (cameraCard == -1 ) {  // testimage
 					g_print ("testimage used.\n");
 					gst_bin_add (GST_BIN (videopipeline),jpegenc);
@@ -213,11 +221,20 @@ bool setVideoTask( streamerTask_t task, int UDPport, char * pText, int cameraCar
 						g_printerr ("jpegenc elements could not be linked.\n");
 						error = true;
 					}
-					//		gst_caps_unref (caps);
-					if (gst_element_link (jpegenc , tee) != TRUE) {
+#ifndef NOSCREEN
+					if (gst_element_link (jpegenc , videopayloader) != TRUE) {
 						g_printerr ("jpegenc and videopayloader could not be linked.\n");
 						error = true;
 					}
+					if (gst_element_link (videopayloader, udpSink  ) != TRUE) {
+						error = true;
+					}
+#else
+					if (gst_element_link (jpegenc , tee) != TRUE) {
+							g_printerr ("jpegenc and videopayloader could not be linked.\n");
+							error = true;
+					}
+#endif
 				}
 				else {
 					g_print ("camera used.\n");
