@@ -46,7 +46,7 @@ void* i2cThread(void* args)
 	int errorCntr = 0;
 
 	res = i2c_init(node);
-	mcp23017_init();
+	res = mcp23017_init();
 
 	do {
 

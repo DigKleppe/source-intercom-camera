@@ -55,7 +55,7 @@ gst-launch-1.0 udpsrc port=5004 caps='application/x-rtp, media=(string)audio, cl
 gst-launch-1.0 udpsrc port=5004 caps='application/x-rtp, media=(string)audio, clock-rate=(int)44100, encoding-name=(string)L16, encoding-params=(string)1, channels=(int)1, payload=(int)96' ! rtpL16depay ! audioconvert ! wavescope ! ximagesink
  */
 
-#define RINGVOLUME 0.1 // local to feedback button
+#define RINGVOLUME 0.05 // local to feedback button
 
 #define ringTone "/root/ringtone1.mp3"
 

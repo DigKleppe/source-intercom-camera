@@ -38,7 +38,7 @@
 //	audioSource = gst_element_factory_make ("filesrc", "filesrc");
 //	g_object_set (G_OBJECT (audioSource), "location",(gchar *) ringTone,NULL);
 //	mpegaudioparser = gst_element_factory_make ("mpegaudioparse", "mpegaudioparse");
-//	mpg123audiodec = gst_element_factory_make ("mpg123audiodec", "mpg123audiodec");
+//	mpg123audiodec = gst_element_factory_make (alsactl store"mpg123audiodec", "mpg123audiodec");
 //
 //	volume = gst_element_factory_make ("volume", "volume");
 //	g_object_set (G_OBJECT (volume), "volume",RINGVOLUME,NULL);

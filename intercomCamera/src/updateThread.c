@@ -214,11 +214,14 @@ void* updateThread(void* args) {
 		fclose (fptr);
 	}
 	if (getmd5("/root/updates/telefoon") == -1 ) {
-		printf( "No updates found");
+		printf( "No updates found\n");
 		usleep ( 10000);
 		pThreadStatus->run = false;
-		pthread_exit(args);
-		return ( NULL);
+		while (1)
+			sleep(100);
+
+	//	pthread_exit(args);
+	//	return ( NULL);
 	}
 
 	while (1) {  // check softwareversions

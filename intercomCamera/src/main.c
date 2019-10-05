@@ -24,8 +24,6 @@
 #include <time.h>
 #include <stdlib.h>
 
-
-
 /*
 ./configure \
    --host=arm-none-linux-gnueabihf\
@@ -141,6 +139,7 @@ bool active = false;
 receiveData_t receiveData;
 transmitData_t transmitData;
 int restarts;
+int rings;
 int ringTimer;
 
 int UDPVideoPort;
@@ -165,7 +164,7 @@ void printDebug(void){
 	if (--debugpresc == 0 ){
 		debugpresc= 10;
 		secToDay(upTime, buf);
-		print("upTime %d: %s restarts:%d ",myFloorID, buf, restarts);
+		print("%d: restarts:%d rings:%d uptime: %s",myFloorID, restarts, rings, buf);
 	}
 
 	//	const int stations[] = {2,4,6,8,10,30,0 };
@@ -214,8 +213,10 @@ void saveState(int state, int actTelefoon ){
 		return;
 	}
 	fprintf( fptr, "restarts: %d\n", restarts);
+	fprintf( fptr, "rings: %d\n", rings);
 	fprintf( fptr, "state: %d\n", state);
 	fprintf( fptr, "actTelefoon: %d\n", actTelefoon);
+
 	fclose(fptr);
 	system("sync");
 	print ( "State %d saved %d\n", state, actTelefoon);
@@ -239,11 +240,9 @@ bool restoreState( int * state, int* actTelefoon ){
 	do {
 		read = getline(&line, &len, fptr);
 		if ( read != -1) {
-			//	if( strstr( (line,"restarts:"))
 			sscanf(line,"restarts: %d\n", &restarts);
-			//	if( strstr(line,"state:"))
+			sscanf(line,"rings: %d\n", &rings);
 			sscanf(line,"state: %d\n",state);
-			//			if( strstr(line,"actTelefoon:"))
 			sscanf(line,"actTelefoon: %d\n", actTelefoon);
 		}
 	} while (read > 0 );
@@ -413,6 +412,7 @@ void test( void) {
 	//		station[15].keys = 0;
 }
 
+
 void startRing ( int p) {
 
 	memset( activeTimer,0, sizeof ( activeTimer) ); // clear others
@@ -429,6 +429,8 @@ void startRing ( int p) {
 			ringTimer = RINGTIME;
 		}
 		active = true;
+		saveState(ACT_STATE_RINGING, p); // in case of reset....
+		rings++;
 	}
 }
 int main(int argc, char *argv[]) {
@@ -484,7 +486,7 @@ int main(int argc, char *argv[]) {
 				case ACT_STATE_RINGING:
 					startRing(activeTelephone);
 					status = STATUS_IDLE;
-					backLightOn();
+			//		backLightOn();
 					break;
 				case ACT_STATE_TALKING:
 					activeTimer[activeTelephone]=ACTIVETIME;
@@ -493,7 +495,7 @@ int main(int argc, char *argv[]) {
 					setAudioReceiveTask(AUDIOTASK_LISTEN,UDPAudioRxPort,microCardNo);
 					active = true;
 					status = STATUS_IDLE;
-					backLightOn();
+				//	backLightOn();
 					break;
 				case ACT_STATE_IDLE:
 					sprintf(message, "\r Intercom\r\n ");
@@ -518,8 +520,8 @@ int main(int argc, char *argv[]) {
 					//	subStatus++;
 					subStatus = 0;
 					status = STATUS_IDLE;
-
-					backLightHalf();
+					backLightOff();
+			//		backLightHalf();
 					break;
 
 				case 30:
@@ -619,26 +621,38 @@ int main(int argc, char *argv[]) {
 									usleep( 10000);
 								setCPUSpeed ( CPU_SPEED_LOW);
 							}
-							if (! testThreadStatus.run){  // stopped with button
+							if ((! testThreadStatus.run) || key( KEY_SW2)) {  // stopped with button
 								testmodeTimer = 0;
+								setVideoTask(TASK_STOP, 0 ,0, 0);
 								oldUnconnected = 0; // force updating
 								setCPUSpeed ( CPU_SPEED_LOW);
+								testThreadStatus.run = false;
 							}
 						}
 						else {
-							if ( key (KEY_SW1)) {  // testkey, abort active  todo
-								//								backLightOn();
-								//								active = false;
-								//								videoThreadStatus.mustStop = true;
-								//								audioTransmitThreadStatus.mustStop = true;
-								//								audioReceiveThreadStatus.mustStop = true;
-								//								while ( videoThreadStatus.run || audioTransmitThreadStatus.run \
-								//										|| audioReceiveThreadStatus.run || messageThreadStatus.run )
-								//									usleep( 10000);
-								//								setCPUSpeed ( CPU_SPEED_HIGH);
-								//								pthread_create(&testThreadID, NULL, &testModeThread, (void *) &testThreadStatus);
-								//								testmodeTimer = TESTMODEMAXTIME;
+							if ( key (KEY_SW1)) {  // testkey, abort active
+								backLightOn();
+								active = false;
+								setCPUSpeed ( CPU_SPEED_HIGH);
+								setAudioReceiveTask (TASK_STOP, 0 ,0);
+								setAudioTransmitTask(TASK_STOP, 0 ,0);
+								setVideoTask(TASK_STOP, 0 ,0, 0);
+								usleep(10000);
+								pthread_create(&testThreadID, NULL, &testModeThread, (void *) &testThreadStatus);
+								testmodeTimer = TESTMODEMAXTIME;
 							}
+							if ( key (KEY_SW2)) {  // testkey, abort active  todo
+								backLightOn();
+								active = false;
+								setCPUSpeed ( CPU_SPEED_HIGH);
+								setAudioReceiveTask (TASK_STOP, 0 ,0);
+								setAudioTransmitTask(TASK_STOP, 0 ,0);
+								setVideoTask(VIDEOTASK_SHOWCAMERA, 0 ,0, 0);
+								usleep(10000);
+								testmodeTimer = TESTMODEMAXTIME;
+								testThreadStatus.run = true;
+							}
+
 							if (active ) {
 								LEDD4 = !LEDD4;
 								backLightOn();
@@ -660,16 +674,15 @@ int main(int argc, char *argv[]) {
 					openDoor = false;
 
 					if (!testThreadStatus.run ) {
-
-						if(keysRT & KEY_SW2) {  // key sw2 test
-							bellButtons |= 1<<TEST_STATION-1; // test no 62
-						}
+#warning TESTKEY OFF
+						//						if(keysRT & KEY_SW2) {  // key sw2 test
+						//							bellButtons |= 1<<TEST_STATION-1; // test no 62
+						//						}
 						mask = 1;
 						for ( int p = 1; p < NR_STATIONS; p++) {
 							//	transmitData.command = COMMAND_NONE; // cleared if receiver received it
 							if ( (bellButtons & mask) || bellSimButtonIn(p)){  // bell key pressed
 								activeTelephone = p;
-								saveState(ACT_STATE_RINGING, activeTelephone); // in case of reset....
 								startRing(p);
 
 

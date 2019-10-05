@@ -344,8 +344,8 @@ void* testThread(void* args)
 void* testModeThread(void* args)
 {
 	bool stop = false;
-//	test_t test = TEST_SPKR;
-	test_t test = TEST_MIC;
+	test_t test = TEST_SPKR;
+//	test_t test = TEST_MIC;
 	int result;
 	volatile threadStatus_t testStatus =  * (threadStatus_t *) args; // to pass to actual test - thread
 	testStatus.info = &test;
