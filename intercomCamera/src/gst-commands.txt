@@ -70,6 +70,13 @@ gst-launch-1.0 pulsesrc ! webrtcdsp ! webrtcechoprobe ! pulsesink
     ! webrtcechoprobe ! audioconvert ! audioresample ! alsasink 
     
     
+filter:
+
+gst-launch-1.0 udpsrc port=5004 caps='application/x-rtp, media=(string)audio, clock-rate=(int)44100, encoding-name=(string)L16, encoding-params=(string)1, channels=(int)1, payload=(int)96' ! rtpL16depay ! audioconvert ! audiocheblimit mode=high-pass cutoff=400 ripple=0.2 ! audioconvert ! audioresample ! alsasink device=hw:1
+gst-launch-1.0 -v audiotestsrc ! audioconvert ! "audio/x-raw,rate=44100" ! rtpL16pay ! udpsink host=192.168.2.255 port=5004
+gst-launch-1.0 -v filesrc location=/home/dig/nanoPiFire2A/Believer.mp3 ! mpegaudioparse ! mpg123audiodec ! audioconvert ! "audio/x-raw,rate=44100" ! rtpL16pay ! udpsink host=192.168.2.255 port=5004
+    
+    
 Eclipse:
 maak autotools Helloworld project met goede naam
 set project properties C++ build build location naar /build map in project 

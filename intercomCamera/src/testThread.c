@@ -51,7 +51,7 @@ const char testText [TEST_END][20] = {
 //gst-launch-1.0 videotestsrc ! textoverlay text="Room A \n Room B" valignment=top halignment=left font-desc="Sans, 72" ! video/x-raw,width=800,height=480 ! videoflip method=counterclockwise ! nxvideosink
 //gst-launch-1.0 -v videotestsrc ! textoverlay text="Room A" valignment=top halignment=left font-desc="Sans, 72" ! autovideosink
 //gst-launch-1.0 videotestsrc ! video/x-raw,width=800,height=600 ! jpegenc ! rtpjpegpay ! udpsink port=5001 host=192.168.2.255
-//gst-launch-1.0 filesrc location=/home/root/audio/tiroler_holzhacker.mp3 ! mpegaudioparse ! mpg123audiodec ! audioconvert ! alsasink device=hw:1
+//gst-launch-1.0 filesrc location=/root/tiroler_holzhacker.mp3 ! mpegaudioparse ! mpg123audiodec ! audioconvert ! alsasink device=hw:1
 //gst-launch-1.0 filesrc location=/home/root/audio/office_phone_4.mp3 ! mpegaudioparse ! mpg123audiodec ! audioconvert ! alsasink device=hw:1
 //gst-launch-1.0 alsasrc device=hw:1 ! audioconvert ! audiopanorama panorama=1.00 ! alsasink device=hw:1
 //
@@ -59,7 +59,10 @@ const char testText [TEST_END][20] = {
 // gst-launch-1.0 -v alsasrc device=hw:1  ! audioconvert ! alsasink device=hw:1
 //gst-launch-1.0 videotestsrc ! textoverlay text="Room A \n Room B" valignment=top halignment=left font-desc="Sans, 72" ! video/x-raw,width=800,height=480 ! videoflip method=counterclockwise ! nxvideosink
 
+/*
+gst-launch-1.0 filesrc location=/root/tiroler_holzhacker.mp3 ! mpegaudioparse ! mpg123audiodec ! audioconvert ! "audio/x-raw, format="F32LE" rate=24000" ! audioconvert ! audiocheblimit mode=high-pass cutoff=400 ripple=0.2 !  alsasink device=hw:1
 
+*/
 void* testThread(void* args)
 {
 	GstElement *audiopipeline,  *audioSource, *mpegaudioparser,* mpg123audiodec, *audioconvert;

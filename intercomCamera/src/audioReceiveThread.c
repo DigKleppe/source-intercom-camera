@@ -50,9 +50,13 @@ gst-launch-1.0 -v audiotestsrc ! audioconvert ! "audio/x-raw,rate=441000" ! rtpL
 
 gst-launch-1.0 -v audiotestsrc ! audioconvert ! "audio/x-raw,rate=24000" ! rtpL16pay ! udpsink host=192.168.2.255 port=5002
 gst-launch-1.0 udpsrc port=5004 caps='application/x-rtp, media=(string)audio, clock-rate=(int)24000, encoding-name=(string)L16, encoding-params=(string)1, channels=(int)1, payload=(int)96' ! rtpL16depay ! audioconvert ! audioresample ! alsasink device=hw:1
-gst-launch-1.0 udpsrc port=5004 caps='application/x-rtp, media=(string)audio, clock-rate=(int)44100, encoding-name=(string)L16, encoding-params=(string)1, channels=(int)1, payload=(int)96' ! rtpL16depay ! audioconvert ! audioresample ! alsasink device=hw:2
+gst-launch-1.0 udpsrc port=5004 caps='application/x-rtp, media=(string)audio, clock-rate=(int)44100, encoding-name=(string)L16, encoding-params=(string)1, channels=(int)1, payload=(int)96' ! rtpL16depay ! audioconvert ! audioresample ! alsasink device=hw:1
 
 gst-launch-1.0 udpsrc port=5004 caps='application/x-rtp, media=(string)audio, clock-rate=(int)44100, encoding-name=(string)L16, encoding-params=(string)1, channels=(int)1, payload=(int)96' ! rtpL16depay ! audioconvert ! wavescope ! ximagesink
+
+
+gst-launch-1.0 udpsrc port=5004 caps='application/x-rtp, media=(string)audio, clock-rate=(int)44100, encoding-name=(string)L16, encoding-params=(string)1, channels=(int)1, payload=(int)96' ! rtpL16depay ! audioconvert ! audiocheblimit mode=high-pass cutoff=400 ripple=0.2 ! audioconvert ! audioresample ! alsasink device=hw:1
+
  */
 
 #define RINGVOLUME 0.05 // local to feedback button
@@ -62,6 +66,7 @@ gst-launch-1.0 udpsrc port=5004 caps='application/x-rtp, media=(string)audio, cl
 static GstElement *audiopipeline = NULL;
 static GstElement *audioSource, *rtpL16depay, *audioconvert,* volume , * audioresample ,*audiosink;
 static GstElement *mpegaudioparser,* mpg123audiodec;
+static GstElement *audiocheblimit, *audioconvert2;
 
 static streamerTask_t actualTask;
 
@@ -78,6 +83,7 @@ static bool stopAudioReceive() {
 bool setAudioReceiveTask ( streamerTask_t task, int UDPport , int SoundCardNo) {
 
 	bool error = false;
+	int errnr = 0;
 	GstCaps *caps = NULL;
 	GstStateChangeReturn ret;
 	char devicename[20];
@@ -163,14 +169,21 @@ bool setAudioReceiveTask ( streamerTask_t task, int UDPport , int SoundCardNo) {
 			audiosink = gst_element_factory_make ("alsasink", "alsasink");
 			g_object_set (audiosink,"device",devicename,NULL);
 
-			if (!audioSource || !rtpL16depay ||!audioconvert || !audioresample ||  !audiosink ) {
+			audiocheblimit = gst_element_factory_make ("audiocheblimit", "audiocheblimit");
+			g_object_set (G_OBJECT(audiocheblimit),"mode",1,NULL);  // MODE_HIGH_PASS = 1 , lOW = 0
+			g_object_set (G_OBJECT(audiocheblimit),"cutoff",500.0,NULL);
+			g_object_set (G_OBJECT(audiocheblimit),"poles",6,NULL);
+
+			audioconvert2 = gst_element_factory_make ("audioconvert", "audioconvert2");
+
+
+			if (!audioSource || !rtpL16depay ||!audioconvert || !audioresample ||  !audiosink || !audiocheblimit || !audioconvert2 ) {
 				g_printerr ("Not all audio elements could be created.\n");
 				error = true;
 			}
 
 			audiopipeline = gst_pipeline_new ("receive audiopipeline");
-			gst_bin_add_many (GST_BIN (audiopipeline), audioSource, rtpL16depay, audioconvert, audioresample, audiosink ,NULL);
-
+			gst_bin_add_many (GST_BIN (audiopipeline), audioSource, rtpL16depay, audioconvert, audioresample, audiosink , audiocheblimit,audioconvert2,NULL);
 
 			caps = gst_caps_new_simple ("application/x-rtp",
 					"media", G_TYPE_STRING,"audio",
@@ -183,20 +196,28 @@ bool setAudioReceiveTask ( streamerTask_t task, int UDPport , int SoundCardNo) {
 					NULL);
 
 			if (link_elements_with_filter (audioSource, rtpL16depay, caps) != TRUE)
-				error = true;
+				errnr = 1;
 
 			if (gst_element_link (rtpL16depay, audioconvert  ) != TRUE)
-				error = true;
+				errnr = 2;
 
-			if (gst_element_link (audioconvert, audioresample  ) != TRUE)
-				error = true;
+			if (gst_element_link (audioconvert, audiocheblimit  ) != TRUE)
+				errnr = 3;
+
+			if (gst_element_link (audiocheblimit, audioconvert2 ) != TRUE)
+				errnr = 4;
+
+			if (gst_element_link (audioconvert2, audioresample  ) != TRUE)
+				errnr = 5;
 
 			if (gst_element_link (audioresample, audiosink  ) != TRUE)
+				errnr = 6;
+			if (errnr > 0 )
 				error = true;
 
 			usleep(10 * 1000);
 			if (error)
-				g_printerr ("Elements could not be linked.\n");
+				g_printerr ("Elements could not be linked. Err%d\n", errnr);
 			else {
 				ret = gst_element_set_state (audiopipeline, GST_STATE_PLAYING);
 				if (ret == GST_STATE_CHANGE_FAILURE) {
