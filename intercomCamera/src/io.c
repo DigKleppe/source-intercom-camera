@@ -177,12 +177,6 @@ void setCameraLEDS( bool state) {
 void setDooropen( bool state){
 	char mssg[20];
 	print("Door: %d\n", (int )state);
-	if ( state ) {
-		setGPIODirection(MAGNET,GPIO_OUT);
-	}
-	else
-		setGPIODirection(MAGNET,GPIO_IN);  //
-
 	setGPIOValue(MAGNET, (int) state );
 
 }

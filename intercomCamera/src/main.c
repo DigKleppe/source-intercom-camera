@@ -655,7 +655,7 @@ int main(int argc, char *argv[]) {
 
 							if (active ) {
 								LEDD4 = !LEDD4;
-								backLightOn();
+						//backLightOn();
 								if ( ringTimer > 0) {
 									ringTimer--;
 									if ( ringTimer == 0 ) {
@@ -674,38 +674,12 @@ int main(int argc, char *argv[]) {
 					openDoor = false;
 
 					if (!testThreadStatus.run ) {
-#warning TESTKEY OFF
-						//						if(keysRT & KEY_SW2) {  // key sw2 test
-						//							bellButtons |= 1<<TEST_STATION-1; // test no 62
-						//						}
 						mask = 1;
 						for ( int p = 1; p < NR_STATIONS; p++) {
 							//	transmitData.command = COMMAND_NONE; // cleared if receiver received it
 							if ( (bellButtons & mask) || bellSimButtonIn(p)){  // bell key pressed
 								activeTelephone = p;
 								startRing(p);
-
-
-								//
-								//								memset( activeTimer,0, sizeof ( activeTimer) ); // clear others
-								//								activeTimer[p]=ACTIVETIME;
-								//								if (commandTimer[p] == 0) {
-								//									commandTimer[p] = COMMANDTIME;
-								//									transmitData.command = COMMAND_RING;
-								//									sprintf (mssg,"ring to %d\n", p*2);
-								//									UDPsendMessage( mssg);
-								//									printf("ring to %d\n", p*2);
-								//									state[p] = ACT_STATE_BELLPRESSED;
-								//									sprintf(message,"%d", p* 2); // print active no
-								//								}
-								//								if (timeoutTimer[p] == 0) { // if no connection open door
-								//									openDoor = true;
-								//									print("Timeout %d\n",p*2);
-								//								}
-								//								setVideoTask(VIDEOTASK_STREAM,UDPVideoPort,NULL,cameraCard);
-								//								setAudioTransmitTask(AUDIOTASK_TALK,UDPAudioTxPort,microCardNo);
-								//								active = true;
-
 								if (!testThreadStatus.run) {
 									setAudioReceiveTask(AUDIOTASK_RING,UDPAudioRxPort,microCardNo); // local speaker
 									ringTimer = RINGTIME;
