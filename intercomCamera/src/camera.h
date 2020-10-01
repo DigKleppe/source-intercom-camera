@@ -13,7 +13,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define SOFTWAREVERSION         23
+#define SOFTWAREVERSION         24
 
 #define VIDEOPORT1				5000	// camera1 to display (begane grond)
 #define VIDEOPORT2				5001	// camera2 to display (eerste etage)
@@ -28,6 +28,8 @@
 #define UDPCHATPORT				5014	// udp socket for chatting between cameras and telephones
 #define UDPCHATPORT2			5015	// udp socket for chatting between cameras and telephones
 #define UDPKEEPALIVEPORT		5016
+#define UDPACKPORT1				5017	//
+#define UDPACKPORT2				5018	//
 #define UPDATEPORT				5050	// tcp socket for update files to telephones
 #define MONITORPORT1			6000	// udp messages from base floor
 #define MONITORPORT2			6001	// udp messages from first floor

@@ -1,6 +1,8 @@
 
 #define _DEFAULT_SOURCE // usleep?
 
+//#define NO_UPDATES
+
 #include "camera.h"
 #include "videoThread.h"
 #include "audioTransmit.h"
@@ -212,7 +214,7 @@ void saveState(int state, int actTelefoon ){
 		print("Save File open Error !\n");
 		return;
 	}
-	fprintf( fptr, "restarts: %d\n", restarts);
+	fprintf( fptr, "Restarts_: %d\n", restarts);
 	fprintf( fptr, "rings: %d\n", rings);
 	fprintf( fptr, "state: %d\n", state);
 	fprintf( fptr, "actTelefoon: %d\n", actTelefoon);
@@ -225,7 +227,7 @@ void saveState(int state, int actTelefoon ){
 
 bool restoreState( int * state, int* actTelefoon ){
 	FILE *fptr;
-
+	int n,val;
 	ssize_t result;
 	char str[50];
 	char *line = NULL;
@@ -240,10 +242,20 @@ bool restoreState( int * state, int* actTelefoon ){
 	do {
 		read = getline(&line, &len, fptr);
 		if ( read != -1) {
-			sscanf(line,"restarts: %d\n", &restarts);
-			sscanf(line,"rings: %d\n", &rings);
-			sscanf(line,"state: %d\n",state);
-			sscanf(line,"actTelefoon: %d\n", actTelefoon);
+			n = sscanf(line,"Restarts_: %d\n", &val);
+			if (n==1) restarts = val;
+			n = sscanf(line,"rings: %d\n", &val);
+			if (n==1) rings = val;
+			n = sscanf(line,"state: %d\n", &val);
+			if (n==1) *state = val;
+			n = sscanf(line,"actTelefoon: %d\n", &val);
+			if (n==1) *actTelefoon = val;
+
+
+			//			sscanf(line,"Restarts: %d\n", &restarts);
+			//			sscanf(line,"rings: %d\n", &rings);
+			//			sscanf(line,"state: %d\n",state);
+			//			sscanf(line,"actTelefoon: %d\n", actTelefoon);
 		}
 	} while (read > 0 );
 
@@ -304,7 +316,7 @@ int init(void) {
 
 	cameraCard = detectAudioCardNo(CAMERA_CARD_NAME);  // detect camera audio. audio not used anymore
 
-	if (microCardNo == -1)
+	if (cameraCard == -1)
 		printf("%s camera not found \n\r", CAMERA_CARD_NAME);
 
 	microCardNo = detectAudioCardNo(SPEAKER_CARD_NAME1); // detect audio interface
@@ -350,6 +362,7 @@ int init(void) {
 		UDPVideoPort = VIDEOPORT1;
 		UDPAudioRxPort = AUDIO_RX_PORT1;
 		UDPAudioTxPort = AUDIO_TX_PORT1;
+#ifndef	NO_UPDATES
 		result = pthread_create(&updateThreadID, NULL, &updateThread, (void *) &updateThreadStatus);
 		if (result == 0) {
 			printf("updateThread created successfully.\n");
@@ -357,6 +370,7 @@ int init(void) {
 			printf("updateThread not created.\n");
 			return -1;
 		}
+#endif
 	}
 	else {
 		myFloorID = FIRST_FLOOR;  // ip 192.168.2.101
@@ -383,7 +397,7 @@ void secToDay(int n , char *buf )
 	n %= 60;
 	int sec = n;
 
-	sprintf(buf,"%d days %d:%d:%d\n", day, hour,min,sec);
+	sprintf(buf,"%d days %d:%d:%d\r\n", day, hour,min,sec);
 }
 
 bool bellSimButtonIn ( int stationID) {
@@ -438,20 +452,16 @@ int main(int argc, char *argv[]) {
 	uint32_t oldConnectCntr =0;
 	uint32_t mask;
 	int presc = (10000/MAINLOOPTIME);
-
-
 	int bytesread;
 	int testmodeTimer = 0;
 	status_t status = STATUS_SHOW_STARTUPSCREEN;
 	int oldUnconnected = 0;
 	int subStatus = 0;
-
 	int activeTelephone;
 	activeState_t activeState;
-
 	int backLight;
 	int oldBackLight;
-
+	uint32_t oldBellButtons;
 
 	bool lastActive = false;
 	backLightOff();
@@ -473,8 +483,6 @@ int main(int argc, char *argv[]) {
 			system("sync");
 			oldBackLight = backLight;
 		}
-
-
 		switch (status) {
 		case STATUS_SHOW_STARTUPSCREEN:
 			switch (subStatus) {
@@ -486,7 +494,7 @@ int main(int argc, char *argv[]) {
 				case ACT_STATE_RINGING:
 					startRing(activeTelephone);
 					status = STATUS_IDLE;
-			//		backLightOn();
+					//		backLightOn();
 					break;
 				case ACT_STATE_TALKING:
 					activeTimer[activeTelephone]=ACTIVETIME;
@@ -495,7 +503,7 @@ int main(int argc, char *argv[]) {
 					setAudioReceiveTask(AUDIOTASK_LISTEN,UDPAudioRxPort,microCardNo);
 					active = true;
 					status = STATUS_IDLE;
-				//	backLightOn();
+					//	backLightOn();
 					break;
 				case ACT_STATE_IDLE:
 					sprintf(message, "\r Intercom\r\n ");
@@ -521,7 +529,7 @@ int main(int argc, char *argv[]) {
 					subStatus = 0;
 					status = STATUS_IDLE;
 					backLightOff();
-			//		backLightHalf();
+					//		backLightHalf();
 					break;
 
 				case 30:
@@ -655,7 +663,7 @@ int main(int argc, char *argv[]) {
 
 							if (active ) {
 								LEDD4 = !LEDD4;
-						//backLightOn();
+								//backLightOn();
 								if ( ringTimer > 0) {
 									ringTimer--;
 									if ( ringTimer == 0 ) {
@@ -674,15 +682,21 @@ int main(int argc, char *argv[]) {
 					openDoor = false;
 
 					if (!testThreadStatus.run ) {
+						oldBellButtons &= bellButtons; // reset old pressed
+
 						mask = 1;
 						for ( int p = 1; p < NR_STATIONS; p++) {
 							//	transmitData.command = COMMAND_NONE; // cleared if receiver received it
 							if ( (bellButtons & mask) || bellSimButtonIn(p)){  // bell key pressed
-								activeTelephone = p;
-								startRing(p);
-								if (!testThreadStatus.run) {
-									setAudioReceiveTask(AUDIOTASK_RING,UDPAudioRxPort,microCardNo); // local speaker
-									ringTimer = RINGTIME;
+								if ( ((bellButtons & mask) != (oldBellButtons & mask)) || bellSimButtonIn(p)) {  //prevent continous pressing
+									bellButtons &= ~oldBellButtons; // disable already pressed key
+									activeTelephone = p;
+									oldBellButtons |= mask;
+									startRing(p);
+									if (!testThreadStatus.run) {
+										setAudioReceiveTask(AUDIOTASK_RING,UDPAudioRxPort,microCardNo); // local speaker
+										ringTimer = RINGTIME;
+									}
 								}
 							}
 

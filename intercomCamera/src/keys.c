@@ -7,6 +7,7 @@
 
 #include "camera.h"
 #include "io.h"
+
 #include <unistd.h>
 
 #define KEYSSAMPLEINTERVAL	5 //ms
@@ -63,6 +64,7 @@ static void keyProcess ( void ){
 		keyrepeatTimer = 0xFFFF;
 }
 
+
 void* keysThread(void* args)
 {
 	int res;
@@ -70,6 +72,8 @@ void* keysThread(void* args)
 	uint32_t inputs;
 	uint32_t lastInputs;
 	uint32_t debounceCntr = DEBOUNCES;
+
+
 
 	while (1)  {
 		usleep(1000 * KEYSSAMPLEINTERVAL);
@@ -83,6 +87,8 @@ void* keysThread(void* args)
 		}
 		else
 			debounceCntr = DEBOUNCES;
+
+
 		lastInputs = inputs;
 		keyProcess();
 	}

@@ -29,9 +29,12 @@
 
 enum { ERR_NONE, ERR_SOCK, ERR_FILE, ERR_FILELEN,  ERR_MD5 , ERR_BLOCK ,ERR_TIMEOUT } errUpdate_t;
 
+#define RETRIES 5
 
 unsigned char md5sum[MD5_DIGEST_LENGTH];
 uint32_t fileLen;
+
+uint32_t updateErrors[NR_STATIONS];
 
 // Print the MD5 sum as hex-digits.
 void print_md5_sum(unsigned char* md) {
@@ -144,7 +147,7 @@ bool transferFile ( char *fileName, int destAddress  ){
 				if ( sscanf(respBuffer,"OK %d",&blocksResp)){
 					if (blocksResp != blocks ){
 						err = true;
-						printf("Block error send%d rec &d\n",blocks,blocksResp );
+						printf("Block error send: %d rec: %d\n",blocks,blocksResp );
 						sprintf (message+ strlen( message),"Block error send %d rec %d\n",blocks,blocksResp );
 					}
 				}
@@ -205,6 +208,7 @@ void* updateThread(void* args) {
 	char buffer[20];
 	printf("updateThread started\n");
 	bool allLastSoftware = false;
+	int retries = 0;
 
 //	saveSettings();
 
@@ -228,17 +232,18 @@ void* updateThread(void* args) {
 		allLastSoftware = true;
 		for ( n = 1; n < sizeof(station)/sizeof( station_t); n++) {
 			if (timeoutTimer[n] > 0) {
-				if ( station[n].softwareversion != updateSoftwareversion){
+				if ( station[n].softwareversion != updateSoftwareversion &&  (updateErrors[n] < RETRIES) ){
 					updateInProgress = true;
 					allLastSoftware = false;
 					usleep(100000);
 					printf("sending update to no %d ", n * 2);
-					sprintf (message,"sending update to no %d \n", n * 2); // print on screen
+				//	sprintf (message,"sending update to no %d \n", n * 2); // print on screen
 
 					err = transferFile("/root/updates/telefoon", n * 2); // send file to station
 					if ( !err) {
+						updateErrors[n] = 0;
 						printf("reboot no %d\r\n", n * 2);
-						sprintf (message+ strlen( message),"reboot no %d\r\n", n * 2);
+					//	sprintf (message+ strlen( message),"reboot no %d\r\n", n * 2);
 						//						sprintf( buffer,"reboot");// give reboot command to station
 						//						TCPsendToTelephone ( n* 2,UPDATEPORT, buffer, strlen(buffer), buffer, 10);
 						station[n].softwareversion = updateSoftwareversion;  // will be overwritten with actual softwareversion
@@ -246,8 +251,10 @@ void* updateThread(void* args) {
 						timeoutTimer[n] = 0;
 					}
 					else {
-						printf("update failed no %d\r\n", n * 2);
-						sprintf (message + strlen( message),"update failed no %d\r\n", n * 2); // print on screen
+						printf("update failed no %d %d\r\n", n * 2,updateErrors[n]);
+						updateErrors[n]++;
+					//	sprintf (message + strlen( message),"update failed no %d %d\r\n", n * 2,updateErrors[n]); // print on screen
+
 					}
 				}
 			}

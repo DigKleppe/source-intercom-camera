@@ -90,6 +90,37 @@ void UDPsendMessage (char * message ) {
 		close ( sock );
 	}
 }
+
+// acknowledge data to telephone
+
+void UDPack( int stationID) {
+	int sock = 0;
+	struct sockaddr_in serv_addr,cliaddr;
+
+	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)   // udp
+		printf("\n Socket creation error \n");
+	else {
+		memset(&serv_addr, '0', sizeof(serv_addr));
+
+		inet_pton(AF_INET, BASE_IP_ADDRESS, &serv_addr.sin_addr);
+		serv_addr.sin_addr.s_addr += (100 + stationID*2) << 24; // add destination to lsb ip
+		serv_addr.sin_family = AF_INET;
+		//	serv_addr.sin_addr.s_addr = INADDR_ANY;
+
+		serv_addr.sin_port = htons(UDPACKPORT1);
+
+//		if ( myFloorID == BASE_FLOOR) {
+//			serv_addr.sin_port = htons(UDPACKPORT1);
+//		}
+//		else {
+//			serv_addr.sin_port = htons(UDPACKPORT2);
+//		}
+		sendto(sock, (uint8_t *) &station[stationID],sizeof(station_t), MSG_CONFIRM, (const struct sockaddr *) &serv_addr,
+				sizeof(serv_addr));
+		close ( sock );
+	}
+}
+
 // recieves alive messages with button info
 
 void* UDPserverThread (void* args) {
@@ -155,6 +186,7 @@ void* UDPserverThread (void* args) {
 						//			printf ( "udp rec from %d: %5d %2d %2d\n", stationID * 2,   tempRecData.uptime , tempRecData.keys, tempRecData.softwareversion);
 						memcpy( &station[stationID] ,&tempRecData, sizeof(station_t));
 						timeoutTimer[stationID]= STATIONTIMEOUT;
+						UDPack(stationID); // acknowlegde message
 					}
 				}
 			}
@@ -193,7 +225,7 @@ void* UDPkeepAliveClient (void* args) {
 			close(sock);
 
 			destAddress++;
-			if ( destAddress > 60)
+			if ( destAddress > 62)
 				destAddress = 2;
 			if ( updateInProgress )
 				usleep(500000);

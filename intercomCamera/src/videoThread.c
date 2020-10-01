@@ -223,7 +223,7 @@ bool setVideoTask( streamerTask_t task, int UDPport, char * pText, int cameraCar
 							g_printerr ("jpegenc elements could not be linked.\n");
 							error = true;
 						}
-#ifndef NOSCREEN
+#ifdef NOSCREEN
 						if (gst_element_link (jpegenc , videopayloader) != TRUE) {
 							g_printerr ("jpegenc and videopayloader could not be linked.\n");
 							error = true;
@@ -233,7 +233,7 @@ bool setVideoTask( streamerTask_t task, int UDPport, char * pText, int cameraCar
 						}
 #else
 						if (gst_element_link (jpegenc , tee) != TRUE) {
-							g_printerr ("jpegenc and videopayloader could not be linked.\n");
+							g_printerr ("jpegenc and tee could not be linked.\n");
 							error = true;
 						}
 #endif
@@ -308,7 +308,7 @@ bool setVideoTask( streamerTask_t task, int UDPport, char * pText, int cameraCar
 #endif
 				}
 
-				if ( !error ) {
+                                                                                                   				if ( !error ) {
 					/* Start playing */
 					ret = gst_element_set_state (videopipeline, GST_STATE_PLAYING);
 					if (ret == GST_STATE_CHANGE_FAILURE) {

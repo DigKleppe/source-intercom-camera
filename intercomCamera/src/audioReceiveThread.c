@@ -259,7 +259,7 @@ bool audioReceiverIsStopped ( void) {
 				stopped = true;
 				break;
 			case GST_MESSAGE_EOS:
-				g_printf("End-Of-Stream reached.\n");
+				print("End-Of-Stream reached.\n");
 				stopped = true;
 				//	gst_element_set_state (audiopipeline, GST_STATE_PLAYING); // start again
 				break;
