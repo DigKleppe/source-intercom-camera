@@ -17,7 +17,9 @@
 #include "keys.h"
 #include "timerThread.h"
 
-#include <gst/gst.h>
+
+#include "/mnt/linuxData/nanoPiFire2A/rootfs-s5p4418/usr/include/gstreamer-1.0/gst/gst.h"
+//#include <gst/gst.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -133,7 +135,7 @@ int microCardNo, speakerCardNo;
 floor_t  myFloorID = BASE_FLOOR;
 volatile bool updateInProgress;
 char message[MESSAGEBUFFERSIZE];
-char mssg[50];
+char mssg[MESSAGEBUFFERSIZE];
 uint32_t oldSeqNo[NR_STATIONS];
 time_t now, lastSec;
 bool openDoor;
@@ -155,6 +157,7 @@ void  print( const char *format, ...) {
 	va_start(args, format);
 	vprintf(format,args);
 	vsnprintf(mssg, sizeof(mssg), format,args);
+	mssg[MESSAGEBUFFERSIZE-1] = 0;
 	UDPsendMessage( mssg);
 	va_end(args);
 }

@@ -64,7 +64,13 @@ void getMyIpAddress( char* dest) {
 
 void UDPsendMessage (char * message ) {
 	int sock = 0;
-	struct sockaddr_in serv_addr,cliaddr;
+	int opt = 1;
+
+	int len = strlen( message);
+//	if ( len > 1000)
+//		return;
+
+	struct sockaddr_in serv_addr;
 
 	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)   // udp
 		printf("\n Socket creation error \n");
@@ -74,7 +80,10 @@ void UDPsendMessage (char * message ) {
 		serv_addr.sin_family = AF_INET;
 		//	serv_addr.sin_addr.s_addr = INADDR_ANY;
 
-		inet_pton(AF_INET, "192.168.2.6", &serv_addr.sin_addr.s_addr);
+	//	serv_addr.sin_addr.s_addr = IPADDR_BROADCAST;// INADDR_ANY;
+		setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt));
+
+		inet_pton(AF_INET, "192.168.2.255", &serv_addr.sin_addr.s_addr);
 
 		if ( myFloorID == BASE_FLOOR) {
 			serv_addr.sin_port = htons(MONITORPORT1);
@@ -85,7 +94,7 @@ void UDPsendMessage (char * message ) {
 			//		sendto(sock, "1: ", 3, MSG_CONFIRM, (const struct sockaddr *) &serv_addr,sizeof(serv_addr));
 
 		}
-		sendto(sock, (uint8_t *) message, strlen(message), MSG_CONFIRM, (const struct sockaddr *) &serv_addr,
+		sendto(sock, (uint8_t *) message, len, MSG_CONFIRM, (const struct sockaddr *) &serv_addr,
 				sizeof(serv_addr));
 		close ( sock );
 	}
@@ -224,7 +233,8 @@ void* UDPkeepAliveClient (void* args) {
 			sendto(sock,  (uint8_t* )&destAddress , sizeof(destAddress) , MSG_CONFIRM, (const struct sockaddr *) &serv_addr, sizeof(serv_addr));
 			close(sock);
 
-			destAddress++;
+		//	destAddress++;
+			destAddress += 2;
 			if ( destAddress > 62)
 				destAddress = 2;
 			if ( updateInProgress )
@@ -259,6 +269,7 @@ void UDPsendToTelephone (int destAddress, int port,  uint8_t *dataToTelephone, i
 }
 
 // used for update
+
 
 // dest address = low byte ip ( 2, 4 .. 60)
 int TCPsendToTelephone ( int destAddress, int port,  uint8_t *dataToTelephone, int txLen , uint8_t *dataFromTelephone, int rxLen ) {
